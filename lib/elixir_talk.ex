@@ -43,7 +43,7 @@ defmodule ElixirTalk do
               increase the ttr to 1.
   """
   @spec put(pid, bitstring) :: result
-  @spec put(pid, bitstring, Keyword) :: result
+  @spec put(pid, bitstring, [{:pri, integer}, {:delay, integer}, {:ttr, integer}]) :: result
   def put(pid, data, opts \\ []) do
     ElixirTalk.Connect.call(pid, {:put, data, opts})
   end
@@ -269,7 +269,7 @@ defmodule ElixirTalk do
   """
 
   @spec release(pid, non_neg_integer) :: :released | :buried | :not_found
-  @spec release(pid, non_neg_integer, Keyword) :: :released | :buried | :not_found
+  @spec release(pid, non_neg_integer, [{:pri, integer}, {:delay, integer}]) :: :released | :buried | :not_found
   def release(pid, id, opts \\ []) do
     ElixirTalk.Connect.call(pid, {:release, id, opts})
   end
