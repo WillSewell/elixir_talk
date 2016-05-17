@@ -13,7 +13,7 @@ defmodule ElixirTalk do
   Connect to the beanstalkd server.
   """
 
-  @spec connect(:inet.ip_address | :inet.hostname, integer, integer) :: {:ok, pid} | {:error, term}
+  @spec connect(:inet.ip_address | :inet.hostname, integer, timeout) :: {:ok, pid} | {:error, term}
   def connect(host \\ '127.0.0.1', port \\ 11300, timeout \\ :infinity) do
     ElixirTalk.Connect.start_link([host, port, timeout])
   end
