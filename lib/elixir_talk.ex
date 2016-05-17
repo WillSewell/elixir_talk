@@ -6,7 +6,7 @@ defmodule ElixirTalk do
   from
   Copyright 2014 by jsvisa(delweng@gmail.com)
   """
-  @type result :: {:inserted, non_neg_integer} | {:buried, non_neg_integer} | {:expected_crlf} | :job_to_big | :darining
+  @type result :: {:inserted, non_neg_integer} | {:buried, non_neg_integer} | {:expected_crlf} | :job_too_big | :draining
   @vsn 1.0
 
   @doc """
@@ -63,7 +63,7 @@ defmodule ElixirTalk do
   watch list.
   """
 
-  @spec watch(pid, bitstring) :: {:watcing, non_neg_integer}
+  @spec watch(pid, bitstring) :: {:watching, non_neg_integer}
   def watch(pid, tube) do
     ElixirTalk.Connect.call(pid, {:watch, tube})
   end
@@ -71,7 +71,7 @@ defmodule ElixirTalk do
   @doc """
   Remove the named tube from the watch list for the current connection.
   """
-  @spec ignore(pid, bitstring) :: {:watching, non_neg_integer} | :not_ingored
+  @spec ignore(pid, bitstring) :: {:watching, non_neg_integer} | :not_ignored
   def ignore(pid, tube) do
     ElixirTalk.Connect.call(pid, {:ignore, tube})
   end
