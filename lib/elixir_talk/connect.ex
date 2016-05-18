@@ -1,28 +1,48 @@
 defmodule ElixirTalk.Connect do
-  use GenServer
+  use Connection
 
   def start_link(args) do
-    :gen_server.start_link(__MODULE__, args, [])
+    Connection.start_link(__MODULE__, args, [])
   end
 
   def quit(pid) do
-    :gen_server.cast(pid, :stop)
+    Connection.cast(pid, :stop)
   end
 
   def call(pid, oper_with_data, timeout \\ 5_000) do
-    :gen_server.call(pid, oper_with_data, timeout)
+    Connection.call(pid, oper_with_data, timeout)
   end
 
   def init([host, port, timeout]) do
+    state = %{host: host, port: port, timeout: timeout, socket: nil}
+    {:connect, :init, state}
+  end
+
+  def connect(_, %{socket: nil, host: host, port: port, timeout: timeout} = state) do
     case :gen_tcp.connect(host, port, [:binary, {:packet, 0}, {:active, false}], timeout) do
       {:ok, socket} ->
-        {:ok, [socket: socket]}
-      {:error, reason} ->
-        {:stop, reason}
+        {:ok, %{state | socket: socket}}
+      {:error, _} ->
+        {:backoff, 1000, state} # Retry connection every second
     end
   end
 
-  def handle_call({:put, data, opts}, _from, [socket: socket] = state) do
+  def disconnect(info, %{socket: socket} = state) do
+    :ok = :gen_tcp.close(socket)
+    case info do
+      {:close, from} ->
+        Connection.reply(from, :ok)
+      {:error, _} ->
+        # Socket was likely closed on the other end
+    end
+    {:connect, :reconnect, %{state | socket: nil}}
+  end
+
+  def handle_call(_, _, %{socket: nil} = state) do
+    {:reply, :closed, state}
+  end
+
+  def handle_call({:put, data, opts}, _from, state) do
     # put <pri> <delay> <ttr> <bytes>\r\n<data>\r\n
     #TODO check the opts limit
     pri   = Keyword.get(opts, :pri, 0)
@@ -30,62 +50,64 @@ defmodule ElixirTalk.Connect do
     ttr   = Keyword.get(opts, :ttr, 60)
     bytes = byte_size(data)
     bin_data = "put #{pri} #{delay} #{ttr} #{bytes}\r\n#{data}\r\n"
-    :gen_tcp.send(socket, bin_data)
-    {:ok, result} = :gen_tcp.recv(socket, 0)
-    {:reply, get_result(result), state}
+    forward_to_socket(state, bin_data)
   end
 
-  def handle_call({:release, id, opts}, _from, [socket: socket] = state) do
+  def handle_call({:release, id, opts}, _from, state) do
     pri   = Keyword.get(opts, :pri, 0)
     delay = Keyword.get(opts, :delay, 0)
     bin_data = "release #{id} #{pri} #{delay}\r\n"
-    :gen_tcp.send(socket, bin_data)
-    {:ok, result} = :gen_tcp.recv(socket, 0)
-    {:reply, get_result(result), state}
+    forward_to_socket(state, bin_data)
   end
 
-  def handle_call({cmd, data, opt}, _from, [socket: socket] = state) do
+  def handle_call({cmd, data, opt}, _from, state) do
     bin_data = String.replace("#{cmd}", "_", "-") <> " #{data} #{opt}\r\n"
-    :gen_tcp.send(socket, bin_data)
-    {:ok, result} = :gen_tcp.recv(socket, 0)
-    {:reply, get_result(result), state}
+    forward_to_socket(state, bin_data)
   end
 
-  def handle_call({cmd, data}, _from, [socket: socket] = state) do
+  def handle_call({cmd, data}, _from, state) do
     cmd = String.replace("#{cmd}", "_", "-")
     bin_data = cond do
       data == [] -> "#{cmd}\r\n"
       true       -> "#{cmd} #{data}\r\n"
     end
-
-    :gen_tcp.send(socket, bin_data)
-    {:ok, result} = :gen_tcp.recv(socket, 0)
-    {:reply, get_result(result), state}
+    forward_to_socket(state, bin_data)
   end
 
-  def handle_call(cmd, _from, [socket: socket] = state) do
+  def handle_call(cmd, _from, state) do
     cmd = Atom.to_string(cmd) |> String.replace("_", "-")
-    :gen_tcp.send(socket, "#{cmd}\r\n")
-    {:ok, result} = :gen_tcp.recv(socket, 0)
-    {:reply, get_result(result), state}
-  end
-
-  def handle_call(_msg, _from, state) do
-    {:reply, :ok, state}
+    forward_to_socket(state, "#{cmd}\r\n")
   end
 
   def handle_cast(:stop, state) do
     {:stop, :normal, state}
   end
 
-  def terminate(:normal, [socket: socket]) do
+  def terminate(_, %{socket: socket}) do
     :gen_tcp.close(socket)
-    :ok
   end
 
   ######################
   ## Privacy Apis
   ######################
+
+  # Forward data to the socket and reply with the response
+  # Disconnect on error from the socket
+  defp forward_to_socket(%{socket: socket} = state, bin_data) do
+    case :gen_tcp.send(socket, bin_data) do
+      :ok ->
+        case :gen_tcp.recv(socket, 0) do
+          {:ok, result} ->
+            {:reply, get_result(result), state}
+          {:error, :timeout} = timeout ->
+            {:reply, :timeout, state}
+          {:error, _} = error ->
+            {:disconnect, error, error, state}
+        end
+      {:error, _} = error ->
+        {:disconnect, error, error, state}
+    end
+  end
 
   defp get_result(result) do
     case String.contains?(result, " ") do

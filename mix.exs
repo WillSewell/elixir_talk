@@ -15,7 +15,7 @@ defmodule ElixirTalk.Mixfile do
   end
 
   defp deps do
-    []
+    [{:connection, "~> 1.0"}]
   end
 
   defp description do
