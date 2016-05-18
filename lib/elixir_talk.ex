@@ -165,7 +165,7 @@ defmodule ElixirTalk do
   Give statistical information about the system as a whole.
   """
 
-  @spec stats(pid) :: Keyword
+  @spec stats(pid) :: Keyword.t
   def stats(pid) do
     ElixirTalk.Connect.call(pid, :stats)
   end
@@ -175,7 +175,7 @@ defmodule ElixirTalk do
   it exists.
   """
 
-  @spec stats_job(pid, non_neg_integer) :: Keyword | :not_found
+  @spec stats_job(pid, non_neg_integer) :: Keyword.t | :not_found
   def stats_job(pid, id) do
     ElixirTalk.Connect.call(pid, {:stats_job, id})
   end
@@ -185,7 +185,7 @@ defmodule ElixirTalk do
   if it exists.
   """
 
-  @spec stats_tube(pid, bitstring) :: Keyword | :not_found
+  @spec stats_tube(pid, bitstring) :: Keyword.t | :not_found
   def stats_tube(pid, tube) do
     ElixirTalk.Connect.call(pid, {:stats_tube, tube})
   end
@@ -194,7 +194,7 @@ defmodule ElixirTalk do
   Return a list of all existing tubes in the server.
   """
 
-  @spec list_tubes(pid) :: List
+  @spec list_tubes(pid) :: list
   def list_tubes(pid) do
     ElixirTalk.Connect.call(pid, :list_tubes)
   end
@@ -212,7 +212,7 @@ defmodule ElixirTalk do
   Return the tubes currently being watched by the client.
   """
 
-  @spec list_tubes_watched(pid) :: List
+  @spec list_tubes_watched(pid) :: list
   def list_tubes_watched(pid) do
     ElixirTalk.Connect.call(pid, :list_tubes_watched)
   end
