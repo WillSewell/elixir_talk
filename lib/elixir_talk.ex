@@ -6,7 +6,8 @@ defmodule ElixirTalk do
   from
   Copyright 2014 by jsvisa(delweng@gmail.com)
   """
-  @type result :: {:inserted, non_neg_integer} | {:buried, non_neg_integer} | {:expected_crlf} | :job_too_big | :draining
+  @type connection_error :: :timeout | :closed
+  @type result :: {:inserted, non_neg_integer} | {:buried, non_neg_integer} | {:expected_crlf} | :job_too_big | :draining | connection_error
   @vsn 1.0
 
   @doc """
@@ -52,7 +53,7 @@ defmodule ElixirTalk do
   Use a tube to `put` jobs.
   """
 
-  @spec use(pid, bitstring) :: {:using, bitstring}
+  @spec use(pid, bitstring) :: {:using, bitstring} | connection_error
   def use(pid, tube) do
     ElixirTalk.Connect.call(pid, {:use, tube})
   end
@@ -63,7 +64,7 @@ defmodule ElixirTalk do
   watch list.
   """
 
-  @spec watch(pid, bitstring) :: {:watching, non_neg_integer}
+  @spec watch(pid, bitstring) :: {:watching, non_neg_integer} | connection_error
   def watch(pid, tube) do
     ElixirTalk.Connect.call(pid, {:watch, tube})
   end
@@ -71,7 +72,8 @@ defmodule ElixirTalk do
   @doc """
   Remove the named tube from the watch list for the current connection.
   """
-  @spec ignore(pid, bitstring) :: {:watching, non_neg_integer} | :not_ignored
+
+  @spec ignore(pid, bitstring) :: {:watching, non_neg_integer} | :not_ignored | connection_error
   def ignore(pid, tube) do
     ElixirTalk.Connect.call(pid, {:ignore, tube})
   end
@@ -83,7 +85,7 @@ defmodule ElixirTalk do
   buried.
   """
 
-  @spec delete(pid, non_neg_integer) :: :deleted | :not_found
+  @spec delete(pid, non_neg_integer) :: :deleted | :not_found | connection_error
   def delete(pid, id) do
     ElixirTalk.Connect.call(pid, {:delete, id})
   end
@@ -97,7 +99,7 @@ defmodule ElixirTalk do
   release of a reserved job until TTR seconds from when the command is issued.
   """
 
-  @spec touch(pid, non_neg_integer) :: :touched | :not_found
+  @spec touch(pid, non_neg_integer) :: :touched | :not_found | connection_error
   def touch(pid, id) do
     ElixirTalk.Connect.call(pid, {:touch, id})
   end
@@ -106,7 +108,7 @@ defmodule ElixirTalk do
   Let the client inspect a job in the system. Peeking the given job id
   """
 
-  @spec peek(pid, non_neg_integer) :: {:found, non_neg_integer} | :not_found
+  @spec peek(pid, non_neg_integer) :: {:found, non_neg_integer} | :not_found | connection_error
   def peek(pid, id) do
     ElixirTalk.Connect.call(pid, {:peek, id})
   end
@@ -115,7 +117,7 @@ defmodule ElixirTalk do
   Peeking the next ready job.
   """
 
-  @spec peek_ready(pid) :: {:found, non_neg_integer} | :not_found
+  @spec peek_ready(pid) :: {:found, non_neg_integer} | :not_found | connection_error
   def peek_ready(pid) do
     ElixirTalk.Connect.call(pid, :peek_ready)
   end
@@ -124,7 +126,7 @@ defmodule ElixirTalk do
   Peeking the delayed job with the shortest delay left.
   """
 
-  @spec peek_delayed(pid) :: {:found, non_neg_integer} | :not_found
+  @spec peek_delayed(pid) :: {:found, non_neg_integer} | :not_found | connection_error
   def peek_delayed(pid) do
     ElixirTalk.Connect.call(pid, :peek_delayed)
   end
@@ -133,7 +135,7 @@ defmodule ElixirTalk do
   Peeking the next job in the list of buried jobs.
   """
 
-  @spec peek_buried(pid) :: {:found, non_neg_integer} | :not_found
+  @spec peek_buried(pid) :: {:found, non_neg_integer} | :not_found | connection_error
   def peek_buried(pid) do
     ElixirTalk.Connect.call(pid, :peek_buried)
   end
@@ -145,7 +147,7 @@ defmodule ElixirTalk do
   Apply only to the currently used tube.
   """
 
-  @spec kick(pid, non_neg_integer) :: {:kicked, non_neg_integer}
+  @spec kick(pid, non_neg_integer) :: {:kicked, non_neg_integer} | connection_error
   def kick(pid, bound) do
     ElixirTalk.Connect.call(pid, {:kick, bound})
   end
@@ -156,7 +158,7 @@ defmodule ElixirTalk do
   currently belongs.
   """
 
-  @spec kick_job(pid, non_neg_integer) :: :kicked | :not_found
+  @spec kick_job(pid, non_neg_integer) :: :kicked | :not_found | connection_error
   def kick_job(pid, id) do
     ElixirTalk.Connect.call(pid, {:kick_job, id})
   end
@@ -165,7 +167,7 @@ defmodule ElixirTalk do
   Give statistical information about the system as a whole.
   """
 
-  @spec stats(pid) :: Keyword.t
+  @spec stats(pid) :: Keyword.t | connection_error
   def stats(pid) do
     ElixirTalk.Connect.call(pid, :stats)
   end
@@ -175,7 +177,7 @@ defmodule ElixirTalk do
   it exists.
   """
 
-  @spec stats_job(pid, non_neg_integer) :: Keyword.t | :not_found
+  @spec stats_job(pid, non_neg_integer) :: Keyword.t | :not_found | connection_error
   def stats_job(pid, id) do
     ElixirTalk.Connect.call(pid, {:stats_job, id})
   end
@@ -185,7 +187,7 @@ defmodule ElixirTalk do
   if it exists.
   """
 
-  @spec stats_tube(pid, bitstring) :: Keyword.t | :not_found
+  @spec stats_tube(pid, bitstring) :: Keyword.t | :not_found | connection_error
   def stats_tube(pid, tube) do
     ElixirTalk.Connect.call(pid, {:stats_tube, tube})
   end
@@ -194,7 +196,7 @@ defmodule ElixirTalk do
   Return a list of all existing tubes in the server.
   """
 
-  @spec list_tubes(pid) :: list
+  @spec list_tubes(pid) :: list | connection_error
   def list_tubes(pid) do
     ElixirTalk.Connect.call(pid, :list_tubes)
   end
@@ -203,7 +205,7 @@ defmodule ElixirTalk do
   Return the tube currently being used by the client.
   """
 
-  @spec list_tube_used(pid) :: {:using, binary}
+  @spec list_tube_used(pid) :: {:using, binary} | connection_error
   def list_tube_used(pid) do
     ElixirTalk.Connect.call(pid, :list_tube_used)
   end
@@ -212,7 +214,7 @@ defmodule ElixirTalk do
   Return the tubes currently being watched by the client.
   """
 
-  @spec list_tubes_watched(pid) :: list
+  @spec list_tubes_watched(pid) :: list | connection_error
   def list_tubes_watched(pid) do
     ElixirTalk.Connect.call(pid, :list_tubes_watched)
   end
@@ -221,7 +223,7 @@ defmodule ElixirTalk do
   Get a job from the currently watched tubes.
   """
 
-  @spec reserve(pid) :: {:reserved, non_neg_integer, bitstring}
+  @spec reserve(pid) :: {:reserved, non_neg_integer, bitstring} | connection_error
   def reserve(pid) do
     ElixirTalk.Connect.call(pid, :reserve, :infinity)
   end
@@ -232,7 +234,8 @@ defmodule ElixirTalk do
 
   @spec reserve(pid, non_neg_integer) :: {:reserved, non_neg_integer, {non_neg_integer, binary}} |
                                          :deadline_soon |
-                                         :timed_out
+                                         :timed_out |
+                                         connection_error
   def reserve(pid, timeout) do
     ElixirTalk.Connect.call(pid, {:reserve_with_timeout, timeout}, :infinity)
   end
@@ -243,8 +246,8 @@ defmodule ElixirTalk do
   kicks them with the `kick` command.
   """
 
-  @spec bury(pid, non_neg_integer) :: :buried | :not_found
-  @spec bury(pid, non_neg_integer, non_neg_integer) :: :buried | :not_found
+  @spec bury(pid, non_neg_integer) :: :buried | :not_found | connection_error
+  @spec bury(pid, non_neg_integer, non_neg_integer) :: :buried | :not_found | connection_error
   def bury(pid, id, pri \\ 0) do
     ElixirTalk.Connect.call(pid, {:bury, id, pri})
   end
@@ -253,7 +256,7 @@ defmodule ElixirTalk do
   Delay any new job being reserved for a given time.
   """
 
-  @spec pause_tube(pid, bitstring, non_neg_integer) :: :paused | :not_found
+  @spec pause_tube(pid, bitstring, non_neg_integer) :: :paused | :not_found | connection_error
   def pause_tube(pid, tube, delay) do
     ElixirTalk.Connect.call(pid, {:pause_tube, tube, delay})
   end
@@ -268,8 +271,8 @@ defmodule ElixirTalk do
               The job will be in the "delayed" state during this time.
   """
 
-  @spec release(pid, non_neg_integer) :: :released | :buried | :not_found
-  @spec release(pid, non_neg_integer, [{:pri, integer}, {:delay, integer}]) :: :released | :buried | :not_found
+  @spec release(pid, non_neg_integer) :: :released | :buried | :not_found | connection_error
+  @spec release(pid, non_neg_integer, [{:pri, integer}, {:delay, integer}]) :: :released | :buried | :not_found | connection_error
   def release(pid, id, opts \\ []) do
     ElixirTalk.Connect.call(pid, {:release, id, opts})
   end
