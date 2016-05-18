@@ -6,14 +6,14 @@ defmodule ElixirTalk do
   from
   Copyright 2014 by jsvisa(delweng@gmail.com)
   """
-  @type result :: {:inserted, non_neg_integer} | {:buried, non_neg_integer} | {:expected_crlf} | :job_to_big | :darining
+  @type result :: {:inserted, non_neg_integer} | {:buried, non_neg_integer} | {:expected_crlf} | :job_too_big | :draining
   @vsn 1.0
 
   @doc """
   Connect to the beanstalkd server.
   """
 
-  @spec connect(:inet.ip_address | :inet.hostname, integer, integer) :: {:ok, pid} | {:error, term}
+  @spec connect(:inet.ip_address | :inet.hostname, integer, timeout) :: {:ok, pid} | {:error, term}
   def connect(host \\ '127.0.0.1', port \\ 11300, timeout \\ :infinity) do
     ElixirTalk.Connect.start_link([host, port, timeout])
   end
@@ -43,7 +43,7 @@ defmodule ElixirTalk do
               increase the ttr to 1.
   """
   @spec put(pid, bitstring) :: result
-  @spec put(pid, bitstring, Keyword) :: result
+  @spec put(pid, bitstring, [{:pri, integer}, {:delay, integer}, {:ttr, integer}]) :: result
   def put(pid, data, opts \\ []) do
     ElixirTalk.Connect.call(pid, {:put, data, opts})
   end
@@ -63,7 +63,7 @@ defmodule ElixirTalk do
   watch list.
   """
 
-  @spec watch(pid, bitstring) :: {:watcing, non_neg_integer}
+  @spec watch(pid, bitstring) :: {:watching, non_neg_integer}
   def watch(pid, tube) do
     ElixirTalk.Connect.call(pid, {:watch, tube})
   end
@@ -71,7 +71,7 @@ defmodule ElixirTalk do
   @doc """
   Remove the named tube from the watch list for the current connection.
   """
-  @spec ignore(pid, bitstring) :: {:watching, non_neg_integer} | :not_ingored
+  @spec ignore(pid, bitstring) :: {:watching, non_neg_integer} | :not_ignored
   def ignore(pid, tube) do
     ElixirTalk.Connect.call(pid, {:ignore, tube})
   end
@@ -165,7 +165,7 @@ defmodule ElixirTalk do
   Give statistical information about the system as a whole.
   """
 
-  @spec stats(pid) :: Keyword
+  @spec stats(pid) :: Keyword.t
   def stats(pid) do
     ElixirTalk.Connect.call(pid, :stats)
   end
@@ -175,7 +175,7 @@ defmodule ElixirTalk do
   it exists.
   """
 
-  @spec stats_job(pid, non_neg_integer) :: Keyword | :not_found
+  @spec stats_job(pid, non_neg_integer) :: Keyword.t | :not_found
   def stats_job(pid, id) do
     ElixirTalk.Connect.call(pid, {:stats_job, id})
   end
@@ -185,7 +185,7 @@ defmodule ElixirTalk do
   if it exists.
   """
 
-  @spec stats_tube(pid, bitstring) :: Keyword | :not_found
+  @spec stats_tube(pid, bitstring) :: Keyword.t | :not_found
   def stats_tube(pid, tube) do
     ElixirTalk.Connect.call(pid, {:stats_tube, tube})
   end
@@ -194,7 +194,7 @@ defmodule ElixirTalk do
   Return a list of all existing tubes in the server.
   """
 
-  @spec list_tubes(pid) :: List
+  @spec list_tubes(pid) :: list
   def list_tubes(pid) do
     ElixirTalk.Connect.call(pid, :list_tubes)
   end
@@ -212,7 +212,7 @@ defmodule ElixirTalk do
   Return the tubes currently being watched by the client.
   """
 
-  @spec list_tubes_watched(pid) :: List
+  @spec list_tubes_watched(pid) :: list
   def list_tubes_watched(pid) do
     ElixirTalk.Connect.call(pid, :list_tubes_watched)
   end
@@ -269,7 +269,7 @@ defmodule ElixirTalk do
   """
 
   @spec release(pid, non_neg_integer) :: :released | :buried | :not_found
-  @spec release(pid, non_neg_integer, Keyword) :: :released | :buried | :not_found
+  @spec release(pid, non_neg_integer, [{:pri, integer}, {:delay, integer}]) :: :released | :buried | :not_found
   def release(pid, id, opts \\ []) do
     ElixirTalk.Connect.call(pid, {:release, id, opts})
   end
